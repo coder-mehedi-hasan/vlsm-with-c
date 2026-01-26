@@ -75,21 +75,6 @@ struct networkConfiguration takeInput(int networkNo)
     return config;
 }
 
-bool isValidIp(char ip[])
-{
-    struct IpCidr ipCidr = splitIpWithCidr(ip);
-    if (ipCidr.cidr == -1)
-    {
-        return false;
-    }
-
-    if (ipCidr.parts == NULL)
-    {
-        return false;
-    }
-
-    return true;
-}
 
 struct IpCidr splitIpWithCidr(const char *ip)
 {
@@ -136,32 +121,21 @@ struct IpCidr splitIpWithCidr(const char *ip)
     return result;
 }
 
-int *splitIp(const char *ip)
+bool isValidIp(char ip[])
 {
-    int *parts = malloc(4 * sizeof(int));
-    if (parts == NULL)
-        return NULL;
-
-    // parse ip and divide in 4 parts and store in parts array
-    int count = sscanf(ip, "%d.%d.%d.%d",
-                       &parts[0], &parts[1],
-                       &parts[2], &parts[3]);
-
-    if (count != 4)
+    struct IpCidr ipCidr = splitIpWithCidr(ip);
+    if (ipCidr.cidr == -1)
     {
-        free(parts);
-        return NULL;
+        return false;
     }
 
-    // Validate range
-    for (int i = 0; i < 4; i++)
+    if (ipCidr.parts[0] < 0 || ipCidr.parts[0] > 255 ||
+        ipCidr.parts[1] < 0 || ipCidr.parts[1] > 255 ||
+        ipCidr.parts[2] < 0 || ipCidr.parts[2] > 255 ||
+        ipCidr.parts[3] < 0 || ipCidr.parts[3] > 255)
     {
-        if (parts[i] < 0 || parts[i] > 255)
-        {
-            free(parts);
-            return NULL;
-        }
+        return false;
     }
 
-    return parts;
+    return true;
 }
