@@ -10,6 +10,10 @@ struct IpCidr splitIpWithCidr(const char *ip);
 bool isValidIp(char ip[]);
 bool isValidNetworkAddress(char ip[], char subnetMask[]);
 char *calculateSubnetMask(char ip[], int cidr);
+int compareNetworks(const void *a, const void *b);
+struct networkConfiguration assignAddresses(struct networkConfiguration netConfig, char startIp[], char subnetMask[]);
+char *incrementIpAddress(char ip[], int incrementValue);
+unsigned int calculateCidr(unsigned int total);
 
 struct networkConfiguration
 {
@@ -42,28 +46,97 @@ int main()
         networks[i - 1] = takeConfigurationInput(i);
     }
 
-    for (int i = 1; i <= networkCount; i++)
-    {
-        printf("Network %d needs %d hosts\n", networks[i - 1].networkNo, networks[i - 1].hostNeed);
-    }
     char *subnetMask = calculateSubnetMask(ip, -1);
     printf("Subnet Mask: %s\n", subnetMask);
     // Check IP is network IP
-    if (isValidNetworkAddress(ip, subnetMask))
+    if (!isValidNetworkAddress(ip, subnetMask))
     {
-        printf("The IP %s is a valid network address for subnet mask %s\n", ip, subnetMask);
+        printf("Provided ip is not valid network address.");
+        return 1;
     }
-    else
-    {
-        printf("The IP %s is NOT a valid network address for subnet mask %s\n", ip, subnetMask);
-    }
-    // For each network
 
-    // calculate cidr
+    // sorting networks in desc order by host need
+    qsort(networks, networkCount, sizeof(struct networkConfiguration), compareNetworks);
+
+       for (int i = 1; i <= networkCount; i++)
+    {
+        printf("Network %d needs %d hosts\n", networks[i - 1].networkNo, networks[i - 1].hostNeed);
+    }
+
+    assignAddresses(networks[0], ip, subnetMask);
+
+    return 0;
+
+    char *startIp = ip;
+    // For each network
+    for (int i = 1; i <= networkCount; i++)
+    {
+        struct networkConfiguration netConfig = networks[i - 1];
+        netConfig = assignAddresses(netConfig, startIp, subnetMask);
+        // networks[i - 1] = netConfig;
+        // startIp = incrementIpAddress(netConfig.broadcastAddress, 1);
+    }
+
+    return 0;
+}
+
+char *incrementIpAddress(char ip[], int incrementValue)
+{
+    struct IpCidr ipCidr = splitIpWithCidr(ip);
+    // increment last part
+    ipCidr.parts[3] += incrementValue;
+    // handle overflow
+    for (int i = 3; i >= 0; i--)
+    {
+        if (ipCidr.parts[i] > 255)
+        {
+            ipCidr.parts[i] = 0;
+            if (i > 0)
+            {
+                ipCidr.parts[i - 1] += 1;
+            }
+        }
+    }
+
+    static char newIp[16];
+    sprintf(newIp, "%d.%d.%d.%d",
+            ipCidr.parts[0],
+            ipCidr.parts[1],
+            ipCidr.parts[2],
+            ipCidr.parts[3]);
+    return newIp;
+}
+
+struct networkConfiguration assignAddresses(struct networkConfiguration netConfig, char startIp[], char subnetMask[])
+{
+    // calcluate cidr
+    int needHost = netConfig.hostNeed + 2;
+    unsigned int cidr = 32 - calculateCidr(needHost);    
     // calculate subnet mask
     // calculate broadcast address
 
-    return 0;
+    return netConfig;
+}
+
+unsigned int calculateCidr(unsigned int total)
+{
+    unsigned int p = 1;
+    int decreasingBit = 0;
+
+
+    while (p < total) {
+        p = p * 2;
+        decreasingBit++;
+    }
+
+    return decreasingBit;   
+}
+
+int compareNetworks(const void *a, const void *b)
+{
+    struct networkConfiguration *net1 = (struct networkConfiguration *)a;
+    struct networkConfiguration *net2 = (struct networkConfiguration *)b;
+    return net2->hostNeed - net1->hostNeed;
 }
 
 bool isValidNetworkAddress(char ip[], char subnetMask[])
