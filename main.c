@@ -80,29 +80,6 @@ int main()
     return 0;
 }
 
-void incrementIpAddress(char ip[], int incrementValue, char *newIp)
-{
-    struct IpCidr ipCidr = splitIpWithCidr(ip);
-
-    ipCidr.parts[3] += incrementValue;
-
-    for (int i = 3; i > 0; i--)
-    {
-        if (ipCidr.parts[i] > 255)
-        {
-            int carry = ipCidr.parts[i] / 256;
-            ipCidr.parts[i] %= 256;
-            ipCidr.parts[i - 1] += carry;
-        }
-    }
-
-    sprintf(newIp, "%d.%d.%d.%d",
-            ipCidr.parts[0],
-            ipCidr.parts[1],
-            ipCidr.parts[2],
-            ipCidr.parts[3]);
-}
-
 struct networkConfiguration assignAddresses(struct networkConfiguration netConfig, char startIp[], char subnetMask[])
 {
     struct IpCidr ipCidr = splitIpWithCidr(startIp);
@@ -112,7 +89,7 @@ struct networkConfiguration assignAddresses(struct networkConfiguration netConfi
     unsigned int addressBit = calculateAddressBit(needHost);
     unsigned int cidr = 32 - addressBit;
     int totalAddress = pow(2, addressBit);
-    
+
     // network address
     char networkAddress[16];
     sprintf(networkAddress, "%d.%d.%d.%d/%d",
@@ -144,6 +121,29 @@ struct networkConfiguration assignAddresses(struct networkConfiguration netConfi
     return netConfig;
 }
 
+void incrementIpAddress(char ip[], int incrementValue, char *newIp)
+{
+    struct IpCidr ipCidr = splitIpWithCidr(ip);
+
+    ipCidr.parts[3] += incrementValue;
+
+    for (int i = 3; i > 0; i--)
+    {
+        if (ipCidr.parts[i] > 255)
+        {
+            int carry = ipCidr.parts[i] / 256;
+            ipCidr.parts[i] %= 256;
+            ipCidr.parts[i - 1] += carry;
+        }
+    }
+
+    sprintf(newIp, "%d.%d.%d.%d",
+            ipCidr.parts[0],
+            ipCidr.parts[1],
+            ipCidr.parts[2],
+            ipCidr.parts[3]);
+}
+
 unsigned int calculateAddressBit(unsigned int total)
 {
     unsigned int p = 1;
@@ -169,7 +169,6 @@ bool isValidNetworkAddress(char ip[], char subnetMask[])
 {
     struct IpCidr ipCidr = splitIpWithCidr(ip);           // get ip parts
     struct IpCidr maskCidr = splitIpWithCidr(subnetMask); // get subnet mask parts
-
     if (ipCidr.cidr == -1)
     {
         return false;
@@ -183,6 +182,34 @@ bool isValidNetworkAddress(char ip[], char subnetMask[])
     }
 
     return true;
+}
+
+int takeValidNetworksCount()
+{
+    int count;
+    while (true)
+    {
+        printf("how many networks you need ? ");
+        scanf("%d", &count);
+        if (count > 0)
+            break;
+        printf("please give a valid network count\n");
+    }
+    return count;
+}
+
+char *takeValidIp()
+{
+    static char ip[26];
+    while (true)
+    {
+        printf("what is the IP address with cidr: ");
+        scanf("%25s", ip);
+        if (isValidIp(ip))
+            break;
+        printf("please give valid ip addresss.\n");
+    }
+    return ip;
 }
 
 char *calculateSubnetMask(char ip[], int cidr)
@@ -224,8 +251,10 @@ char *calculateSubnetMask(char ip[], int cidr)
             j++;
             startIndex++;
         }
+
         char *endptr;
         long decimal_integer;
+
         // Convert the binary string to a long integer
         decimal_integer = strtol(_bitsPart, &endptr, 2);
         startIndex = i;
@@ -237,34 +266,6 @@ char *calculateSubnetMask(char ip[], int cidr)
     sprintf(subnetMask, "%d.%d.%d.%d", parts[0], parts[1], parts[2], parts[3]);
 
     return subnetMask;
-}
-
-int takeValidNetworksCount()
-{
-    int count;
-    while (true)
-    {
-        printf("how many networks you need ? ");
-        scanf("%d", &count);
-        if (count > 0)
-            break;
-        printf("please give a valid network count\n");
-    }
-    return count;
-}
-
-char *takeValidIp()
-{
-    static char ip[26];
-    while (true)
-    {
-        printf("what is the IP address with cidr: ");
-        scanf("%25s", ip);
-        if (isValidIp(ip))
-            break;
-        printf("please give valid ip addresss.\n");
-    }
-    return ip;
 }
 
 struct networkConfiguration takeConfigurationInput(int networkNo)
@@ -280,7 +281,27 @@ struct networkConfiguration takeConfigurationInput(int networkNo)
             break;
         printf("please give a valid host\n");
     }
+
     return config;
+}
+
+bool isValidIp(char ip[])
+{
+    struct IpCidr ipCidr = splitIpWithCidr(ip);
+
+    if (ipCidr.cidr == -1)
+    {
+        return false;
+    }
+
+    if (ipCidr.parts[0] < 0 || ipCidr.parts[0] > 255 ||
+        ipCidr.parts[1] < 0 || ipCidr.parts[1] > 255 ||
+        ipCidr.parts[2] < 0 || ipCidr.parts[2] > 255 ||
+        ipCidr.parts[3] < 0 || ipCidr.parts[3] > 255)
+    {
+        return false;
+    }
+    return true;
 }
 
 struct IpCidr splitIpWithCidr(const char *ip)
@@ -326,23 +347,4 @@ struct IpCidr splitIpWithCidr(const char *ip)
     }
 
     return result;
-}
-
-bool isValidIp(char ip[])
-{
-    struct IpCidr ipCidr = splitIpWithCidr(ip);
-
-    if (ipCidr.cidr == -1)
-    {
-        return false;
-    }
-
-    if (ipCidr.parts[0] < 0 || ipCidr.parts[0] > 255 ||
-        ipCidr.parts[1] < 0 || ipCidr.parts[1] > 255 ||
-        ipCidr.parts[2] < 0 || ipCidr.parts[2] > 255 ||
-        ipCidr.parts[3] < 0 || ipCidr.parts[3] > 255)
-    {
-        return false;
-    }
-    return true;
 }
