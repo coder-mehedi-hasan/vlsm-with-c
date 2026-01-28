@@ -49,7 +49,6 @@ int main()
     }
 
     char *subnetMask = calculateSubnetMask(ip, -1);
-    printf("Subnet Mask: %s\n", subnetMask);
     // Check IP is network IP
     if (!isValidNetworkAddress(ip, subnetMask))
     {
@@ -69,7 +68,6 @@ int main()
         networks[i - 1] = netConfig;
         incrementIpAddress(netConfig.broadcastAddress, 1, startIp);
     }
-
     for (int i = 1; i <= networkCount; i++)
     {
         printf("Network %d:\n", networks[i - 1].networkNo);
